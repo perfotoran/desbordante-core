@@ -4,6 +4,7 @@
 #include "frequent_subgraph.h"
 #include "graph.h"
 #include "history.h"
+#include "min_graph.h"
 #include "projection.h"
 
 namespace gspan {
@@ -14,7 +15,7 @@ class SubgraphMiner {
 
     History history_;
     std::vector<int> rightmost_path_;
-    csr_graph_t min_graph_;
+    MinGraph min_graph_;
     MinProjection min_projection_;
 
     int min_sup_;
