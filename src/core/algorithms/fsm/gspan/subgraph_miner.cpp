@@ -25,7 +25,7 @@ int CountSupport(Projection const& projection) {
 }  // namespace
 
 void SubgraphMiner::MineChild(Projection const& projection, ExtendedEdge const& new_edge,
-                              DFSCode& code) {
+                              DFSCode code) {
     int support = CountSupport(projection);
     if (support < min_sup_) {
         return;
@@ -51,7 +51,7 @@ void SubgraphMiner::MineChild(Projection const& projection, ExtendedEdge const& 
     code.Pop();
 }
 
-void SubgraphMiner::MineSubgraph(Projection const& projection, DFSCode& code) {
+void SubgraphMiner::MineSubgraph(Projection const& projection, DFSCode const& code) {
     if (code.Size() == static_cast<size_t>(max_number_of_edges_)) {
         LOG_TRACE("Maximum pattern size reached, backtracking");
         return;
@@ -61,12 +61,33 @@ void SubgraphMiner::MineSubgraph(Projection const& projection, DFSCode& code) {
     ProjectionMapForward forward_pmap;
 
     Enumerate(code, projection, backward_pmap, forward_pmap);
-    for (auto const& [ee, proj] : backward_pmap) {
-        MineChild(proj, ee, code);
+
+    std::atomic<int> pending{0};
+
+    for (auto& [ee, proj] : backward_pmap) {
+        if (thread_pool_) {
+            auto p_ptr = std::make_shared<Projection>(std::move(proj));
+            thread_pool_->Spawn([this, p_ptr = std::move(p_ptr), ee, code](int t_id) {
+                (*miners_)[t_id]->MineChild(std::move(*p_ptr), ee, code);
+            }, pending);
+        } else {
+            MineChild(std::move(proj), ee, code);
+        }
     }
     for (auto it = forward_pmap.rbegin(); it != forward_pmap.rend(); it++) {
-        auto const& [ee, proj] = *it;
-        MineChild(proj, ee, code);
+        auto& [ee, proj] = *it;
+        if (thread_pool_) {
+            auto p_ptr = std::make_shared<Projection>(std::move(proj));
+            thread_pool_->Spawn([this, p_ptr = std::move(p_ptr), ee, code](int t_id) {
+                (*miners_)[t_id]->MineChild(std::move(*p_ptr), ee, code);
+            }, pending);
+        } else {
+            MineChild(std::move(proj), ee, code);
+        }
+    }
+
+    if (thread_pool_) {
+        thread_pool_->Wait(pending, thread_id_);
     }
 }
 

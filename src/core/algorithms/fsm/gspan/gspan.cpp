@@ -103,11 +103,32 @@ void GSpan::Launch() {
     }
 
     ProjectionMap embeddings = GetInitialEdges();
+
+    size_t num_workers = std::thread::hardware_concurrency();
+    if (num_workers == 0) num_workers = 1;
+
+    ThreadPool pool(num_workers);
+    std::vector<std::unique_ptr<SubgraphMiner>> miners;
+    for (size_t i = 0; i < num_workers + 1; ++i) {
+        auto miner =
+                std::make_unique<SubgraphMiner>(pruned_csr_graphs_, min_sup_, max_number_of_edges_);
+        miner->SetParallelContext(&pool, &miners, i);
+        miners.push_back(std::move(miner));
+    }
+
+    std::atomic<int> pending{0};
     for (auto const& [ee, proj] : embeddings) {
-        SubgraphMiner miner(pruned_csr_graphs_, min_sup_, max_number_of_edges_);
-        miner.MineFromSeed(proj, ee);
-        auto& results = miner.GetFrequentSubgraphs();
-        frequent_subgraphs_.insert(frequent_subgraphs_.end(), results.begin(), results.end());
+        pool.Spawn([&miners, &proj, ee](int t_id) { miners[t_id]->MineFromSeed(proj, ee); },
+                   pending);
+    }
+
+    pool.Wait(pending, num_workers);
+
+    for (auto& miner : miners) {
+        for (auto& fs : miner->GetFrequentSubgraphs()) {
+            fs.id = frequent_subgraphs_.size();
+            frequent_subgraphs_.push_back(std::move(fs));
+        }
     }
 
     LOG_INFO("GSpan complete: {} frequent subgraphs found", frequent_subgraphs_.size());
@@ -275,7 +296,7 @@ void GSpan::FindAllOnlyOneVertex() {
     }
     LOG_DEBUG("Found {} distinct vertex labels", label_map.size());
 
-    for (auto [label, temp_sup_g] : label_map) {
+    for (auto const& [label, temp_sup_g] : label_map) {
         int sup = temp_sup_g.size();
         if (sup >= min_sup_) {
             frequent_vertex_labels_.push_back(label);

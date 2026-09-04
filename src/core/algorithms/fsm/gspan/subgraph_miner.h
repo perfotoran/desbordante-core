@@ -6,6 +6,7 @@
 #include "history.h"
 #include "min_graph.h"
 #include "projection.h"
+#include "thread_pool.h"
 
 namespace gspan {
 
@@ -18,11 +19,14 @@ class SubgraphMiner {
     MinGraph min_graph_;
     MinProjection min_projection_;
 
-    int min_sup_;
-    int max_number_of_edges_;
+    size_t min_sup_;
+    size_t max_number_of_edges_;
+    ThreadPool* thread_pool_ = nullptr;
+    std::vector<std::unique_ptr<SubgraphMiner>>* miners_ = nullptr;
+    int thread_id_ = 0;
 
-    void MineChild(Projection const& projection, ExtendedEdge const& new_edge, DFSCode& code);
-    void MineSubgraph(Projection const& projection, DFSCode& code);
+    void MineChild(Projection const& projection, ExtendedEdge const& new_edge, DFSCode code);
+    void MineSubgraph(Projection const& projection, DFSCode const& code);
 
     void Enumerate(DFSCode const& code, Projection const& projection,
                    ProjectionMapBackward& backward_pmap, ProjectionMapForward& forward_pmap);
@@ -42,6 +46,12 @@ class SubgraphMiner {
     void UpdateRightmostPath(DFSCode const& code, size_t size);
 
 public:
+    void SetParallelContext(ThreadPool* pool, std::vector<std::unique_ptr<SubgraphMiner>>* miners, int thread_id) {
+        thread_pool_ = pool;
+        miners_ = miners;
+        thread_id_ = thread_id;
+    }
+
     SubgraphMiner(std::vector<csr_graph_t> const& graph_database, int min_sup,
                   int max_number_of_edges)
         : graph_database_(graph_database),
@@ -63,7 +73,7 @@ public:
         MineChild(projection, seed, code);
     }
 
-    std::vector<FrequentSubgraph> const& GetFrequentSubgraphs() const {
+    std::vector<FrequentSubgraph>& GetFrequentSubgraphs() {
         return frequent_subgraphs_;
     }
 };

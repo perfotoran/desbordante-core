@@ -1,9 +1,9 @@
 #include <algorithm>
 #include <unordered_map>
 
+#include <boost/container_hash/hash.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
-#include <boost/container_hash/hash.hpp>
 
 namespace gspan {
 
