@@ -4,7 +4,7 @@
 
 #include <boost/unordered/unordered_flat_set.hpp>
 
-#include "graph.h"
+#include "types/graph.h"
 
 namespace gspan {
 

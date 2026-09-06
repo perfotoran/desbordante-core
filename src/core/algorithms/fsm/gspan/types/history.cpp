@@ -23,7 +23,6 @@ void History::Reconstruct(ProjectionEntry const& start, csr_graph_t const& graph
     } else {
         // Has an encoded projection, assume it is the same size and distinct.
         // (allows the do-while)
-        // Reuse as much of this as possible.
 
         ProjectionEntry const* new_entry = &start;
         ProjectionEntry const* old_entry = current_;

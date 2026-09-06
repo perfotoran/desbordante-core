@@ -8,10 +8,10 @@
 
 #include "core/algorithms/algorithm.h"
 #include "core/config/names_and_descriptions.h"
-#include "frequent_subgraph.h"
-#include "graph.h"
-#include "history.h"
-#include "projection.h"
+#include "types/frequent_subgraph.h"
+#include "types/graph.h"
+#include "types/history.h"
+#include "types/projection.h"
 
 namespace algos {
 class GSpan : public Algorithm {
@@ -55,9 +55,9 @@ protected:
     void RegisterOptions();
 
 public:
-    void Launch();
-
     GSpan();
+
+    void Launch();
 
     std::vector<gspan::FrequentSubgraph> const& GetFrequentSubgraphs() const {
         return frequent_subgraphs_;

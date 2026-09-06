@@ -27,7 +27,7 @@ int CountSupport(Projection const& projection) {
 void SubgraphMiner::MineChild(Projection const& projection, ExtendedEdge const& new_edge,
                               DFSCode code) {
     int support = CountSupport(projection);
-    if (support < min_sup_) {
+    if (static_cast<size_t>(support) < min_sup_) {
         return;
     }
 
@@ -67,9 +67,11 @@ void SubgraphMiner::MineSubgraph(Projection const& projection, DFSCode const& co
     for (auto& [ee, proj] : backward_pmap) {
         if (thread_pool_) {
             auto p_ptr = std::make_shared<Projection>(std::move(proj));
-            thread_pool_->Spawn([this, p_ptr = std::move(p_ptr), ee, code](int t_id) {
-                (*miners_)[t_id]->MineChild(std::move(*p_ptr), ee, code);
-            }, pending);
+            thread_pool_->Spawn(
+                    [this, p_ptr = std::move(p_ptr), ee, code](int t_id) {
+                        (*miners_)[t_id]->MineChild(std::move(*p_ptr), ee, code);
+                    },
+                    pending);
         } else {
             MineChild(std::move(proj), ee, code);
         }
@@ -78,9 +80,11 @@ void SubgraphMiner::MineSubgraph(Projection const& projection, DFSCode const& co
         auto& [ee, proj] = *it;
         if (thread_pool_) {
             auto p_ptr = std::make_shared<Projection>(std::move(proj));
-            thread_pool_->Spawn([this, p_ptr = std::move(p_ptr), ee, code](int t_id) {
-                (*miners_)[t_id]->MineChild(std::move(*p_ptr), ee, code);
-            }, pending);
+            thread_pool_->Spawn(
+                    [this, p_ptr = std::move(p_ptr), ee, code](int t_id) {
+                        (*miners_)[t_id]->MineChild(std::move(*p_ptr), ee, code);
+                    },
+                    pending);
         } else {
             MineChild(std::move(proj), ee, code);
         }
@@ -192,10 +196,6 @@ void SubgraphMiner::GetOtherForward(ProjectionEntry const& entry, csr_graph_t co
     }
 }
 
-// ============================================================================
-// Minimality checking — uses MinGraph (lightweight, no BGL)
-// ============================================================================
-
 bool SubgraphMiner::IsCanonical(DFSCode const& code) {
     LOG_TRACE("Checking canonicity: pattern size={}", code.Size());
     min_graph_.BuildFromDFSCode(code);
@@ -294,9 +294,8 @@ bool SubgraphMiner::IsBackwardMin(gspan::DFSCode const& code, ExtendedEdge const
                 auto const& edge_from = min_graph_[edge.from];
                 auto const& edge_to = min_graph_[edge.to];
 
-                if (ln_edge.to == edge.from &&
-                    std::tuple{edge.label, edge_to.label} <=
-                            std::tuple{ln_edge.label, last_node.label}) {
+                if (ln_edge.to == edge.from && std::tuple{edge.label, edge_to.label} <=
+                                                       std::tuple{ln_edge.label, last_node.label}) {
                     ExtendedEdge min_ee(Vertex{from_id, last_node.label},
                                         Vertex{to_id, edge_from.label}, ln_edge.label);
                     // A smaller edge was found, so the given edge is not minimal.
@@ -334,8 +333,8 @@ bool SubgraphMiner::IsForwardMin(gspan::DFSCode const& code, ExtendedEdge const&
                 continue;
             }
 
-            ExtendedEdge min_ee(Vertex{max_id, last_node.label},
-                                Vertex{max_id + 1, to_node.label}, ln_edge.label);
+            ExtendedEdge min_ee(Vertex{max_id, last_node.label}, Vertex{max_id + 1, to_node.label},
+                                ln_edge.label);
             // A smaller edge was found, so the given edge is not minimal
             if (ExtendedEdgeForwardCompare{}(min_ee, ee)) {
                 return false;
@@ -404,9 +403,8 @@ bool SubgraphMiner::ExistsBackwards(size_t projection_start_index) {
                 auto const& edge = history_.GetMinEdge(rightmost_path_[i]);
                 auto const& edge_to = min_graph_[edge.to];
 
-                if (ln_edge.to == edge.from &&
-                    std::tuple{edge.label, edge_to.label} <=
-                            std::tuple{ln_edge.label, last_node.label}) {
+                if (ln_edge.to == edge.from && std::tuple{edge.label, edge_to.label} <=
+                                                       std::tuple{ln_edge.label, last_node.label}) {
                     return true;
                 }
             }

@@ -9,10 +9,10 @@
 #include <gtest/gtest.h>
 
 #include "core/algorithms/algo_factory.h"
-#include "core/algorithms/fsm/gspan/dfscode.h"
-#include "core/algorithms/fsm/gspan/extended_edge.h"
-#include "core/algorithms/fsm/gspan/graph_parser.h"
 #include "core/algorithms/fsm/gspan/gspan.h"
+#include "core/algorithms/fsm/gspan/parser/graph_parser.h"
+#include "core/algorithms/fsm/gspan/types/dfscode.h"
+#include "core/algorithms/fsm/gspan/types/extended_edge.h"
 #include "core/config/names.h"
 #include "tests/common/csv_config_util.h"
 

@@ -1,12 +1,12 @@
 #pragma once
 
-#include "dfscode.h"
-#include "frequent_subgraph.h"
-#include "graph.h"
-#include "history.h"
-#include "min_graph.h"
-#include "projection.h"
-#include "thread_pool.h"
+#include "types/dfscode.h"
+#include "types/frequent_subgraph.h"
+#include "types/graph.h"
+#include "types/history.h"
+#include "types/min_graph.h"
+#include "types/projection.h"
+#include "utils/thread_pool.h"
 
 namespace gspan {
 
@@ -46,7 +46,8 @@ class SubgraphMiner {
     void UpdateRightmostPath(DFSCode const& code, size_t size);
 
 public:
-    void SetParallelContext(ThreadPool* pool, std::vector<std::unique_ptr<SubgraphMiner>>* miners, int thread_id) {
+    void SetParallelContext(ThreadPool* pool, std::vector<std::unique_ptr<SubgraphMiner>>* miners,
+                            int thread_id) {
         thread_pool_ = pool;
         miners_ = miners;
         thread_id_ = thread_id;

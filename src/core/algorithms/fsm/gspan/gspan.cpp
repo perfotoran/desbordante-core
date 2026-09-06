@@ -8,10 +8,10 @@
 
 #include "core/config/option_using.h"
 #include "core/util/logger.h"
-#include "graph_parser.h"
-#include "sparse_triangular_matrix.h"
-#include "subgraph_miner.h"
-#include "utils.h"
+#include "miner/subgraph_miner.h"
+#include "parser/graph_parser.h"
+#include "types/sparse_triangular_matrix.h"
+#include "utils/utils.h"
 using namespace gspan;
 
 namespace algos {

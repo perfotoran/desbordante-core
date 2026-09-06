@@ -30,7 +30,7 @@ public:
         for (auto const& ee : code.GetExtendedEdges()) {
             max_id = std::max({max_id, ee.vertex1.id, ee.vertex2.id});
         }
-        // Reuse capacity — clear edges but keep allocated vectors
+
         for (auto& v : vertices_) {
             v.edges.clear();
         }

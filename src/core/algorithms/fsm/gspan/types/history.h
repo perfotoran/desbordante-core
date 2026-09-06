@@ -42,7 +42,6 @@ public:
 
     void Reconstruct(ProjectionEntry const& start, csr_graph_t const& graph);
 
-    // MinGraph overloads for minimality checking
     void ReconstructEdges(MinProjection const& projection, MinGraph const& graph, int start);
     void ReconstructVertices(MinProjection const& projection, MinGraph const& graph, int start);
 
