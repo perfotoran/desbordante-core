@@ -126,9 +126,26 @@ void GSpan::Launch() {
 
     for (auto& miner : miners) {
         for (auto& fs : miner->GetFrequentSubgraphs()) {
-            fs.id = frequent_subgraphs_.size();
             frequent_subgraphs_.push_back(std::move(fs));
         }
+    }
+
+    std::sort(frequent_subgraphs_.begin(), frequent_subgraphs_.end(),
+              [](gspan::FrequentSubgraph const& a, gspan::FrequentSubgraph const& b) {
+                  auto const& ca = a.dfs_code.GetExtendedEdges();
+                  auto const& cb = b.dfs_code.GetExtendedEdges();
+                  if (ca.size() != cb.size()) {
+                      return ca.size() < cb.size();
+                  }
+                  for (size_t i = 0; i < ca.size(); ++i) {
+                      if (ca[i].SmallerThan(cb[i])) return true;
+                      if (cb[i].SmallerThan(ca[i])) return false;
+                  }
+                  return false;
+              });
+
+    for (size_t i = 0; i < frequent_subgraphs_.size(); ++i) {
+        frequent_subgraphs_[i].id = i;
     }
 
     LOG_INFO("GSpan complete: {} frequent subgraphs found", frequent_subgraphs_.size());
