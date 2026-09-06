@@ -256,11 +256,14 @@ protected:
 };
 
 TEST_F(GSpanTest, LargeGraph) {
+    size_t expected_subgraphs_count = 682;  // on mutag dataset with minsup 0.5
+
     auto algorithm = CreateAlgorithmInstance(kGSpanLargeGraph, 0.5);
     algorithm->Execute();
-
     auto const& subgraphs = algorithm->GetFrequentSubgraphs();
-    EXPECT_GE(subgraphs.size(), 1);
+    size_t actual_subgraphs_count = subgraphs.size();
+
+    EXPECT_EQ(actual_subgraphs_count, expected_subgraphs_count);
     for (auto const& sg : subgraphs) {
         EXPECT_GE(sg.support, algorithm->GetMinSup());
     }
