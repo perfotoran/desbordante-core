@@ -77,7 +77,7 @@ void GSpan::ResetState() {
 void GSpan::ExecuteInternal() {
     min_sup_ = static_cast<int>(std::ceil(min_frequency_ * raw_dataset_.size()));
 
-    Launch();
+    MineSubgraphs();
     LOG_DEBUG("Mining complete: {} frequent subgraphs found", frequent_subgraphs_.size());
 
     if (!output_path_.empty()) {
@@ -87,7 +87,7 @@ void GSpan::ExecuteInternal() {
     }
 }
 
-void GSpan::Launch() {
+void GSpan::MineSubgraphs() {
     LOG_INFO("Starting GSpan algorithm: {} graphs, min_sup_={}", raw_dataset_.size(), min_sup_);
 
     LOG_DEBUG("Searching for frequent vertex labels");
@@ -106,9 +106,10 @@ void GSpan::Launch() {
 
     ProjectionMap embeddings = GetInitialEdges();
 
-    ThreadPool pool(threads_num_);
+    int pool_threads = threads_num_ - 1;
+    ThreadPool pool(pool_threads);
     std::vector<std::unique_ptr<SubgraphMiner>> miners;
-    for (size_t i = 0; i < threads_num_ + 1; ++i) {
+    for (auto i = 0; i < pool_threads + 1; ++i) {
         auto miner =
                 std::make_unique<SubgraphMiner>(pruned_csr_graphs_, min_sup_, max_number_of_edges_);
         miner->SetParallelContext(&pool, &miners, i);
@@ -121,7 +122,7 @@ void GSpan::Launch() {
                    pending);
     }
 
-    pool.Wait(pending, threads_num_);
+    pool.Wait(pending, pool_threads);
 
     for (auto& miner : miners) {
         for (auto& fs : miner->GetFrequentSubgraphs()) {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cassert>
+
 #include "types/dfscode.h"
 #include "types/frequent_subgraph.h"
 #include "types/graph.h"
@@ -48,6 +50,9 @@ class SubgraphMiner {
 public:
     void SetParallelContext(ThreadPool* pool, std::vector<std::unique_ptr<SubgraphMiner>>* miners,
                             int thread_id) {
+        assert(pool != nullptr);
+        assert(miners != nullptr);
+
         thread_pool_ = pool;
         miners_ = miners;
         thread_id_ = thread_id;
@@ -60,8 +65,7 @@ public:
           max_number_of_edges_(max_number_of_edges) {
         int max_edges = 0;
         int max_vertices = 0;
-        for (size_t i = 0; i < graph_database_.size(); i++) {
-            auto& graph = graph_database_[i];
+        for (auto const& graph : graph_database_) {
             max_edges = std::max(max_edges, static_cast<int>(boost::num_edges(graph)));
             max_vertices = std::max(max_vertices, static_cast<int>(boost::num_vertices(graph)));
         }

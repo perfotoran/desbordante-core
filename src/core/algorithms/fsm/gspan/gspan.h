@@ -60,7 +60,7 @@ protected:
 public:
     GSpan();
 
-    void Launch();
+    void MineSubgraphs();
 
     std::vector<gspan::FrequentSubgraph> const& GetFrequentSubgraphs() const {
         return frequent_subgraphs_;

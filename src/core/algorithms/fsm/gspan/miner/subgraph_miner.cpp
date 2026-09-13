@@ -8,9 +8,9 @@ namespace gspan {
 
 namespace {
 
-int CountSupport(Projection const& projection) {
+size_t CountSupport(Projection const& projection) {
     int prev_id = -1;
-    int support = 0;
+    size_t support = 0;
 
     for (auto const& entry : projection) {
         if (prev_id != entry.graph_id) {
@@ -26,8 +26,8 @@ int CountSupport(Projection const& projection) {
 
 void SubgraphMiner::MineChild(Projection const& projection, ExtendedEdge const& new_edge,
                               DFSCode code) {
-    int support = CountSupport(projection);
-    if (static_cast<size_t>(support) < min_sup_) {
+    size_t const support = CountSupport(projection);
+    if (support < min_sup_) {
         return;
     }
 
@@ -47,12 +47,10 @@ void SubgraphMiner::MineChild(Projection const& projection, ExtendedEdge const& 
                                          std::move(original_graph_ids), support);
         MineSubgraph(projection, code);
     }
-
-    code.Pop();
 }
 
 void SubgraphMiner::MineSubgraph(Projection const& projection, DFSCode const& code) {
-    if (code.Size() == static_cast<size_t>(max_number_of_edges_)) {
+    if (code.Size() == max_number_of_edges_) {
         LOG_TRACE("Maximum pattern size reached, backtracking");
         return;
     }
@@ -64,35 +62,25 @@ void SubgraphMiner::MineSubgraph(Projection const& projection, DFSCode const& co
 
     std::atomic<int> pending{0};
 
+    auto dispatch = [this, code, &pending](Projection&& proj, ExtendedEdge const& ee) {
+        auto p_ptr = std::make_shared<Projection>(std::move(proj));
+        thread_pool_->Spawn(
+                [this, p_ptr = std::move(p_ptr), ee, code](int t_id) mutable {
+                    (*miners_)[t_id]->MineChild(std::move(*p_ptr), ee, std::move(code));
+                },
+                pending);
+    };
+
     for (auto& [ee, proj] : backward_pmap) {
-        if (thread_pool_) {
-            auto p_ptr = std::make_shared<Projection>(std::move(proj));
-            thread_pool_->Spawn(
-                    [this, p_ptr = std::move(p_ptr), ee, code](int t_id) {
-                        (*miners_)[t_id]->MineChild(std::move(*p_ptr), ee, code);
-                    },
-                    pending);
-        } else {
-            MineChild(std::move(proj), ee, code);
-        }
-    }
-    for (auto it = forward_pmap.rbegin(); it != forward_pmap.rend(); it++) {
-        auto& [ee, proj] = *it;
-        if (thread_pool_) {
-            auto p_ptr = std::make_shared<Projection>(std::move(proj));
-            thread_pool_->Spawn(
-                    [this, p_ptr = std::move(p_ptr), ee, code](int t_id) {
-                        (*miners_)[t_id]->MineChild(std::move(*p_ptr), ee, code);
-                    },
-                    pending);
-        } else {
-            MineChild(std::move(proj), ee, code);
-        }
+        dispatch(std::move(proj), ee);
     }
 
-    if (thread_pool_) {
-        thread_pool_->Wait(pending, thread_id_);
+    for (auto it = forward_pmap.rbegin(); it != forward_pmap.rend(); ++it) {
+        auto& [ee, proj] = *it;
+        dispatch(std::move(proj), ee);
     }
+
+    thread_pool_->Wait(pending, thread_id_);
 }
 
 void SubgraphMiner::Enumerate(DFSCode const& code, Projection const& projection,
@@ -198,7 +186,6 @@ void SubgraphMiner::GetOtherForward(ProjectionEntry const& entry, csr_graph_t co
 
 bool SubgraphMiner::IsCanonical(DFSCode const& code) {
     LOG_TRACE("Checking canonicity: pattern size={}", code.Size());
-    min_graph_.BuildFromDFSCode(code);
     rightmost_path_.clear();
     rightmost_path_.push_back(0);
 
@@ -206,6 +193,7 @@ bool SubgraphMiner::IsCanonical(DFSCode const& code) {
         return true;
     }
 
+    min_graph_.BuildFromDFSCode(code);
     min_projection_.clear();
 
     // The first edge in the sequence must be the
