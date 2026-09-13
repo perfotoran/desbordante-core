@@ -10,6 +10,24 @@
 #include "types/projection.h"
 #include "utils/thread_pool.h"
 
+namespace {
+
+inline size_t CountSupport(gspan::Projection const& projection) {
+    int prev_id = -1;
+    size_t support = 0;
+
+    for (auto const& entry : projection) {
+        if (prev_id != entry.graph_id) {
+            prev_id = entry.graph_id;
+            support++;
+        }
+    }
+
+    return support;
+}
+
+}  // namespace
+
 namespace gspan {
 
 class SubgraphMiner {
@@ -27,7 +45,8 @@ class SubgraphMiner {
     std::vector<std::unique_ptr<SubgraphMiner>>* miners_ = nullptr;
     int thread_id_ = 0;
 
-    void MineChild(Projection const& projection, ExtendedEdge const& new_edge, DFSCode code);
+    void MineChild(Projection const& projection, ExtendedEdge const& new_edge, DFSCode code,
+                   size_t const support);
     void MineSubgraph(Projection const& projection, DFSCode const& code);
 
     void Enumerate(DFSCode const& code, Projection const& projection,
@@ -75,7 +94,8 @@ public:
 
     void MineFromSeed(Projection const& projection, ExtendedEdge const& seed) {
         DFSCode code;
-        MineChild(projection, seed, code);
+        size_t const support = CountSupport(projection);
+        MineChild(projection, seed, code, support);
     }
 
     std::vector<FrequentSubgraph>& GetFrequentSubgraphs() {

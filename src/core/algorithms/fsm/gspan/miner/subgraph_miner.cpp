@@ -25,11 +25,11 @@ size_t CountSupport(Projection const& projection) {
 }  // namespace
 
 void SubgraphMiner::MineChild(Projection const& projection, ExtendedEdge const& new_edge,
-                              DFSCode code) {
-    size_t const support = CountSupport(projection);
-    if (support < min_sup_) {
-        return;
-    }
+                              DFSCode code, size_t const support) {
+    // size_t const support = CountSupport(projection);
+    // if (support < min_sup_) {
+    //     return;
+    // }
 
     code.Add(new_edge);
 
@@ -63,10 +63,15 @@ void SubgraphMiner::MineSubgraph(Projection const& projection, DFSCode const& co
     std::atomic<int> pending{0};
 
     auto dispatch = [this, code, &pending](Projection&& proj, ExtendedEdge const& ee) {
+        size_t const support = CountSupport(proj);
+        if (support < min_sup_) {
+            return;
+        }
+
         auto p_ptr = std::make_shared<Projection>(std::move(proj));
         thread_pool_->Spawn(
-                [this, p_ptr = std::move(p_ptr), ee, code](int t_id) mutable {
-                    (*miners_)[t_id]->MineChild(std::move(*p_ptr), ee, std::move(code));
+                [this, p_ptr = std::move(p_ptr), ee, code, support](int t_id) mutable {
+                    (*miners_)[t_id]->MineChild(std::move(*p_ptr), ee, std::move(code), support);
                 },
                 pending);
     };
