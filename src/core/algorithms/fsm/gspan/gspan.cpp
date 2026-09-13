@@ -197,7 +197,7 @@ ProjectionMap GSpan::GetInitialEdges() {
                 if (source_label <= target_label) {
                     ExtendedEdge ee = ExtendedEdge(Vertex(0, source_label), Vertex(1, target_label),
                                                    graph[edge].label);
-                    result[ee].emplace_back(i, edge, nullptr);
+                    result[ee].PushBack(i, edge, nullptr);
                 }
             }
         }

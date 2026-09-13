@@ -6,31 +6,8 @@
 
 namespace gspan {
 
-namespace {
-
-size_t CountSupport(Projection const& projection) {
-    int prev_id = -1;
-    size_t support = 0;
-
-    for (auto const& entry : projection) {
-        if (prev_id != entry.graph_id) {
-            prev_id = entry.graph_id;
-            support++;
-        }
-    }
-
-    return support;
-}
-
-}  // namespace
-
 void SubgraphMiner::MineChild(Projection const& projection, ExtendedEdge const& new_edge,
                               DFSCode code, size_t const support) {
-    // size_t const support = CountSupport(projection);
-    // if (support < min_sup_) {
-    //     return;
-    // }
-
     code.Add(new_edge);
 
     // If the resulting graph is canonical (it means that the graph is non redundant)
@@ -63,7 +40,7 @@ void SubgraphMiner::MineSubgraph(Projection const& projection, DFSCode const& co
     std::atomic<int> pending{0};
 
     auto dispatch = [this, code, &pending](Projection&& proj, ExtendedEdge const& ee) {
-        size_t const support = CountSupport(proj);
+        size_t const support = proj.GetSupport();
         if (support < min_sup_) {
             return;
         }
@@ -129,7 +106,7 @@ void SubgraphMiner::GetBackward(ProjectionEntry const& entry, csr_graph_t const&
                 ExtendedEdge ee(Vertex{rm_vertex_id, graph[last_node].label},
                                 Vertex{path_ee.vertex1.id, graph[edge_source].label},
                                 graph[ln_edge].label);
-                backward_pmap[ee].emplace_back(entry.graph_id, ln_edge, &entry);
+                backward_pmap[ee].PushBack(entry.graph_id, ln_edge, &entry);
             }
 
             break;
@@ -158,7 +135,7 @@ void SubgraphMiner::GetFirstForward(ProjectionEntry const& entry, csr_graph_t co
 
         ExtendedEdge ee(Vertex{rm_vertex_id, graph[last_node].label},
                         Vertex{rm_vertex_id + 1, graph[ln_edge_to].label}, graph[ln_edge].label);
-        forward_pmap[ee].emplace_back(entry.graph_id, ln_edge, &entry);
+        forward_pmap[ee].PushBack(entry.graph_id, ln_edge, &entry);
     }
 }
 
@@ -183,7 +160,7 @@ void SubgraphMiner::GetOtherForward(ProjectionEntry const& entry, csr_graph_t co
                 std::tuple{graph[cn_edge].label, graph[to_node].label}) {
                 ExtendedEdge ee(Vertex{from_id, graph[current_node].label},
                                 Vertex{to_id + 1, graph[to_node].label}, graph[cn_edge].label);
-                forward_pmap[ee].emplace_back(entry.graph_id, cn_edge, &entry);
+                forward_pmap[ee].PushBack(entry.graph_id, cn_edge, &entry);
             }
         }
     }
